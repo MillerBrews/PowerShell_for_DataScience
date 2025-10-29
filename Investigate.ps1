@@ -1,7 +1,7 @@
 ﻿<#
 PS4DS: Acquire (Websites)
 Author: Eric K. Miller
-Last updated: 28 October 2025
+Last updated: 29 October 2025
 
 This script contains PowerShell code for plotting data.
 #>
@@ -62,9 +62,9 @@ function Show-Chart {
     param (
         [Parameter(Mandatory)]$DataObject,
         [Parameter(Mandatory)]
-        [ValidateSet("Bar", "Line", "Pie", "Point")][string]$ChartType,
-        [Parameter()]$XData,
-        [Parameter()]$YData,
+        [ValidateSet("Bar", "Column", "Line", "Pie", "Point")][string]$ChartType,
+        [Parameter()]$XData=$null,
+        [Parameter()]$YData=$null,
         [Parameter()]$DataColor="MediumBlue",
         [Parameter()]$ChartTitleText="",
         [Parameter()]$XAxisTitleText="",
@@ -81,28 +81,34 @@ function Show-Chart {
     $Chart.ChartAreas.Add($ChartArea)
     
     switch ($ChartType) {
-    <#
-        {$_ -eq "Bar"}
-            {}
-        {$_ -eq "Line"}
-            {}
-        {$_ -eq "Pie"}
-            {$headers = $DataObject[0].PSObject.Properties.Name
-            for ($i=0; $i -lt $headers.Length; $i++) {
-                $null = $Series.Points.AddXY($labels[$i], $data[$i])
+        "Bar" {
+            $Chart.Series['Series1'].Points.DataBindXY($XData, $YData)
+            $Series.IsValueShownAsLabel = $true
+            $ChartArea.AxisX.Interval = 1
+        }
+        "Column" {
+            $Chart.Series['Series1'].Points.DataBindXY($XData, $YData)
+            $Series.IsValueShownAsLabel = $true
+            $ChartArea.AxisX.Interval = 1
+        }
+        "Line" {}
+        "Pie" {
+            for ($i = 0; $i -lt $XData.Count; $i++) {
+                $null = $Series.Points.AddXY($XData[$i], $YData[$i])
             }
             $Series["PieLabelStyle"] = "Outside"  # $Series.CustomProperties
             $Series["PieLineColor"] = "Black"  # $Series.CustomProperties
             $Series.Label = "#AXISLABEL: #VAL (#PERCENT{P0})"
-            $Legend = New-Object Legend
-            $Chart.Legends.Add($Legend)
-            }#>
-        {$_ -eq "Point"}
-            {$Chart.Series['Series1'].Points.DataBindXY($XData, $YData)}
+            #$Legend = New-Object Legend
+            #$Chart.Legends.Add($Legend)
+        }
+        "Point" {
+            $Chart.Series['Series1'].Points.DataBindXY($XData, $YData)
+        }
 #        default
 #            {$Impact_Structures[$i].'Diameter__km__approx' = $_}
     }
-
+    
     $Chart.Width = 700
     $Chart.Height = 500
     $Chart.Left = 10
