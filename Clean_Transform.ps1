@@ -1,7 +1,7 @@
 ﻿<#
 PS4DS: Acquire (Websites)
 Author: Eric K. Miller
-Last updated: 28 October 2025
+Last updated: 30 October 2025
 
 This script contains PowerShell code for cleaning data.
 #>
@@ -107,11 +107,10 @@ function Get-InterpolatedValue {
     }
     process {
         $filteredValues += $DataObject | ? {$_.$Field -notin @($null, '', 'na', 'n/a')}
+        $measuredValues = $filteredValues | Measure-Object -Property $Field -Average -Sum -Maximum -Minimum
     }
     end {
-        $measuredValues = $filteredValues | Measure-Object -Property $Field -Average -Sum -Maximum -Minimum
         $interpolatedValue = [Math]::Floor($measuredValues.$Measure)
-
         return $interpolatedValue
     }
 }
