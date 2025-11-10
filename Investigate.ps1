@@ -1,7 +1,7 @@
 ﻿<#
 PS4DS: Acquire (Websites)
 Author: Eric K. Miller
-Last updated: 29 October 2025
+Last updated: 10 November 2025
 
 This script contains PowerShell code for plotting data.
 #>
@@ -17,16 +17,13 @@ Add-Type -AssemblyName System.Windows.Forms
 function Show-Chart {
     <#
     .SYNOPSIS
-        Plot data from a supplied data object.
+        Plot data from supplied data series.
 
     .DESCRIPTION
-        This function uses a data object, its fields, and optional
-    parameters to create and display a PowerShell chart. The user has
-    the option of selecting among several chart types.
+        This function uses fields from a data object (arrays), and
+    optional parameters to create and display a PowerShell chart. The
+    user has the option of selecting among several chart types.
     
-    .PARAMETER DataObject
-        The data object with fields to plot.
-
     .PARAMETER ChartType
         A ValidateSet of available chart types.
     
@@ -35,6 +32,9 @@ function Show-Chart {
 
     .PARAMETER YData
         The y-value data from the data object.
+
+    .PARAMETER Theta
+        The parameters for a line, i.e., @(slope, y_intercept).
 
     .PARAMETER DataColor
         Enables the user to set the primary chart color.
@@ -56,59 +56,24 @@ function Show-Chart {
             XAxisTitleText = "Height (cm)"
             YAxisTitleText = "Mass (kg)"
         }
-        Show-Chart -DataObject $StarWars_plot_fit -ChartType Point @dataParams @chartParams
+        Show-Chart -ChartType Point @dataParams @chartParams
     #>
     [CmdletBinding(SupportsShouldProcess)]
     param (
-        [Parameter(Mandatory)]$DataObject,
         [Parameter(Mandatory)]
-        [ValidateSet("Bar", "Column", "Line", "Pie", "Point")][string]$ChartType,
+        [ValidateSet('Bar', 'Column', 'Line', 'Pie', 'Point', 'PointsAndLine', 'Histogram')]
+        [string]$ChartType,
         [Parameter()]$XData=$null,
         [Parameter()]$YData=$null,
-        [Parameter()]$DataColor="MediumBlue",
-        [Parameter()]$ChartTitleText="",
-        [Parameter()]$XAxisTitleText="",
-        [Parameter()]$YAxisTitleText=""
+        [Parameter()]$Theta=$null,
+        [Parameter()]$DataColor='SteelBlue',
+        [Parameter()]$ChartTitleText='',
+        [Parameter()]$XAxisTitleText='',
+        [Parameter()]$YAxisTitleText=''
     )
 
+    # Create chart object and set its properties
     $Chart = New-Object Chart
-    $ChartArea = New-Object ChartArea
-    $Series = New-Object Series
-    $ChartTypes = [SeriesChartType]
-    $Series.ChartType = $ChartTypes::$ChartType
-
-    $Chart.Series.Add($Series)
-    $Chart.ChartAreas.Add($ChartArea)
-    
-    switch ($ChartType) {
-        "Bar" {
-            $Chart.Series['Series1'].Points.DataBindXY($XData, $YData)
-            $Series.IsValueShownAsLabel = $true
-            $ChartArea.AxisX.Interval = 1
-        }
-        "Column" {
-            $Chart.Series['Series1'].Points.DataBindXY($XData, $YData)
-            $Series.IsValueShownAsLabel = $true
-            $ChartArea.AxisX.Interval = 1
-        }
-        "Line" {}
-        "Pie" {
-            for ($i = 0; $i -lt $XData.Count; $i++) {
-                $null = $Series.Points.AddXY($XData[$i], $YData[$i])
-            }
-            $Series["PieLabelStyle"] = "Outside"  # $Series.CustomProperties
-            $Series["PieLineColor"] = "Black"  # $Series.CustomProperties
-            $Series.Label = "#AXISLABEL: #VAL (#PERCENT{P0})"
-            #$Legend = New-Object Legend
-            #$Chart.Legends.Add($Legend)
-        }
-        "Point" {
-            $Chart.Series['Series1'].Points.DataBindXY($XData, $YData)
-        }
-#        default
-#            {$Impact_Structures[$i].'Diameter__km__approx' = $_}
-    }
-    
     $Chart.Width = 700
     $Chart.Height = 500
     $Chart.Left = 10
@@ -116,9 +81,130 @@ function Show-Chart {
     $Chart.BackColor = [System.Drawing.Color]::White
     $Chart.BorderColor = 'Black'
     $Chart.BorderDashStyle = 'Solid'
+    $ChartArea = New-Object ChartArea
+    $Chart.ChartAreas.Add($ChartArea)
 
-    $Series.Color = [System.Drawing.Color]::$DataColor
+    # Create form to host the chart
+    $Form = New-Object Windows.Forms.Form
+    #$Form.Text = 'Plot Example'
+    $Form.Width = 640
+    $Form.Height = 480
+    $Form.Controls.Add($Chart)
+    
+    # Create the data series
+    switch ($ChartType) {
+        'Bar' {
+            $Series = New-Object Series
+            $ChartTypes = [SeriesChartType]
+            $Series.ChartType = $ChartTypes::$ChartType
 
+            $Series.Name = 'BarPlotSeries'
+            $Series.Points.DataBindXY($XData, $YData)
+            $Series.IsValueShownAsLabel = $true
+            $Series.Color = [System.Drawing.Color]::$DataColor
+            $ChartArea.AxisX.Interval = 1
+            $Chart.Series.Add($Series)
+        }
+        'Column' {
+            $Series = New-Object Series
+            $ChartTypes = [SeriesChartType]
+            $Series.ChartType = $ChartTypes::$ChartType
+
+            $Series.Name = 'ColumnPlotSeries'
+            $Series.Points.DataBindXY($XData, $YData)
+            $Series.IsValueShownAsLabel = $true
+            $Series.Color = [System.Drawing.Color]::$DataColor
+            $ChartArea.AxisX.Interval = 1
+            $Chart.Series.Add($Series)
+        }
+        'Line' {
+            $Series = New-Object Series
+            $ChartTypes = [SeriesChartType]
+            $Series.ChartType = $ChartTypes::$ChartType
+            
+            $XData_bounds = $XData | Measure-Object -Minimum -Maximum
+            $x_pts = $XData_bounds.Minimum..$XData_bounds.Maximum
+            $y_pts = $x_pts | ForEach-Object {$Theta[0] * $_ + $Theta[1]}
+
+            $Series.Name = 'LinePlotSeries'
+            $Series.Points.DataBindXY($x_pts, $y_pts)
+            #$Series.Color = [System.Drawing.Color]::Thistle
+            $Chart.Series.Add($Series)
+        }
+        'Pie' {
+            $Series = New-Object Series
+            $ChartTypes = [SeriesChartType]
+            $Series.ChartType = $ChartTypes::$ChartType
+            
+            for ($i = 0; $i -lt $XData.Count; $i++) {
+                $null = $Series.Points.AddXY($XData[$i], $YData[$i])
+            }
+            $Series['PieLabelStyle'] = 'Outside'  # $Series.CustomProperties
+            $Series['PieLineColor'] = 'Black'  # $Series.CustomProperties
+            $Series.Label = "#AXISLABEL: #VAL (#PERCENT{P0})"
+            $Chart.Series.Add($Series)
+            #$Legend = New-Object Legend
+            #$Chart.Legends.Add($Legend)
+        }
+        'Point' {
+            $Series = New-Object Series
+            $ChartTypes = [SeriesChartType]
+            $Series.ChartType = $ChartTypes::$ChartType
+            
+            $Series.Name = 'PointPlotSeries'
+            $Series.Points.DataBindXY($XData, $YData)
+            #$Series.Color = [System.Drawing.Color]::$DataColor
+            $Chart.Series.Add($Series)
+        }
+        'PointsAndLine' {
+            # Add points series
+            $PointsSeries = New-Object Series
+            $ChartTypes = [SeriesChartType]
+            $PointsSeries.ChartType = $ChartTypes::'Point'
+
+            $PointsSeries.Name = 'PointsPlotSeries'
+            $PointsSeries.Points.DataBindXY($XData, $YData)
+            #$PointsSeries.Color = [System.Drawing.Color]::$DataColor
+            $Chart.Series.Add($PointsSeries)
+
+            # Add line series
+            $LineSeries = New-Object Series
+            $LineSeries.ChartType = $ChartTypes::'Line'
+
+            $XData_bounds = $XData | Measure-Object -Minimum -Maximum
+            $x_pts = $XData_bounds.Minimum..$XData_bounds.Maximum
+            $y_pts = $x_pts | ForEach-Object {$Theta[0] * $_ + $Theta[1]}
+
+            $LineSeries.Name = 'LinePlotSeries'
+            $LineSeries.Points.DataBindXY($x_pts, $y_pts)
+            #$LineSeries.Color = [System.Drawing.Color]::$DataColor
+            $Chart.Series.Add($LineSeries)
+        }
+        'Histogram' {
+            # Create histogram with n buckets
+            $histogram = New-Object MathNet.Numerics.Statistics.Histogram($XData, 10)
+
+            # Create series for histogram bars
+            $Series = New-Object Series
+            $ChartTypes = [SeriesChartType]
+            $Series.ChartType = $ChartTypes::'Column'
+            $Series.Name = 'Histogram'
+
+            $Series.Color = [System.Drawing.Color]::$DataColor
+            $Series.BorderWidth = 1
+
+            # Add buckets to chart
+            for ($i = 0; $i -lt $histogram.BucketCount; $i++) {
+                $bucket = $histogram[$i]
+                $label = "{0:N1}-{1:N1}" -f $bucket.LowerBound, $bucket.UpperBound
+                [void]$Series.Points.AddXY($label, $bucket.Count)
+            }
+            $Chart.Series.Add($Series)
+        }
+#        default
+#            {$Impact_Structures[$i].'Diameter__km__approx' = $_}
+    }
+    
     $ChartTitle = New-Object Title
     $ChartTitle.Text = $ChartTitleText
     $Font = New-Object System.Drawing.Font @('Lucida Console', '12', [System.Drawing.FontStyle]::Bold)
@@ -131,13 +217,8 @@ function Show-Chart {
     $AnchorAll = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Right -bor
     [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left
 
-    $Form = New-Object System.Windows.Forms.Form
-    $Form.Text = "Plot Example"
-    $Form.Width = 800
-    $Form.Height = 600
-
-    $Form.Controls.Add($Chart)
     $Chart.Anchor = $AnchorAll
+    $Chart.Dock = "Fill"
 
     #$Chart.SaveImage(...)
 
