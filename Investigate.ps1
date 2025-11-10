@@ -86,7 +86,6 @@ function Show-Chart {
 
     # Create form to host the chart
     $Form = New-Object Windows.Forms.Form
-    #$Form.Text = 'Plot Example'
     $Form.Width = 640
     $Form.Height = 480
     $Form.Controls.Add($Chart)
@@ -104,6 +103,8 @@ function Show-Chart {
             $Series.Color = [System.Drawing.Color]::$DataColor
             $ChartArea.AxisX.Interval = 1
             $Chart.Series.Add($Series)
+
+            $Form.Text = 'Bar Plot'
         }
         'Column' {
             $Series = New-Object Series
@@ -116,6 +117,8 @@ function Show-Chart {
             $Series.Color = [System.Drawing.Color]::$DataColor
             $ChartArea.AxisX.Interval = 1
             $Chart.Series.Add($Series)
+
+            $Form.Text = 'Column Plot'
         }
         'Line' {
             $Series = New-Object Series
@@ -130,6 +133,8 @@ function Show-Chart {
             $Series.Points.DataBindXY($x_pts, $y_pts)
             #$Series.Color = [System.Drawing.Color]::Thistle
             $Chart.Series.Add($Series)
+
+            $Form.Text = 'Line Plot'
         }
         'Pie' {
             $Series = New-Object Series
@@ -145,6 +150,7 @@ function Show-Chart {
             $Chart.Series.Add($Series)
             #$Legend = New-Object Legend
             #$Chart.Legends.Add($Legend)
+            $Form.Text = 'Pie Plot'
         }
         'Point' {
             $Series = New-Object Series
@@ -155,6 +161,8 @@ function Show-Chart {
             $Series.Points.DataBindXY($XData, $YData)
             #$Series.Color = [System.Drawing.Color]::$DataColor
             $Chart.Series.Add($Series)
+
+            $Form.Text = 'Scatter Plot'
         }
         'PointsAndLine' {
             # Add points series
@@ -179,6 +187,8 @@ function Show-Chart {
             $LineSeries.Points.DataBindXY($x_pts, $y_pts)
             #$LineSeries.Color = [System.Drawing.Color]::$DataColor
             $Chart.Series.Add($LineSeries)
+
+            $Form.Text = 'Point and Line Plot'
         }
         'BoxPlot' {
             $rawSeries = New-Object Series
@@ -212,6 +222,8 @@ function Show-Chart {
             # Add a dummy point to trigger boxplot rendering
             [void]$boxSeries.Points.AddXY(1, 0)
             $Chart.Series.Add($boxSeries)
+
+            $Form.Text = 'BoxPlot'
         }
         'Histogram' {
             # Create histogram with n buckets
@@ -233,6 +245,8 @@ function Show-Chart {
                 [void]$Series.Points.AddXY($label, $bucket.Count)
             }
             $Chart.Series.Add($Series)
+
+            $Form.Text = 'Histogram'
         }
 #        default
 #            {$Impact_Structures[$i].'Diameter__km__approx' = $_}
