@@ -61,7 +61,7 @@ function Show-Chart {
     [CmdletBinding(SupportsShouldProcess)]
     param (
         [Parameter(Mandatory)]
-        [ValidateSet('Bar', 'Column', 'Line', 'Pie', 'Point', 'PointsAndLine', 'Histogram')]
+        [ValidateSet('Bar', 'Column', 'Line', 'Pie', 'Point', 'PointsAndLine', 'BoxPlot', 'Histogram')]
         [string]$ChartType,
         [Parameter()]$XData=$null,
         [Parameter()]$YData=$null,
@@ -160,7 +160,7 @@ function Show-Chart {
             # Add points series
             $PointsSeries = New-Object Series
             $ChartTypes = [SeriesChartType]
-            $PointsSeries.ChartType = $ChartTypes::'Point'
+            $PointsSeries.ChartType = $ChartTypes::Point
 
             $PointsSeries.Name = 'PointsPlotSeries'
             $PointsSeries.Points.DataBindXY($XData, $YData)
@@ -169,7 +169,7 @@ function Show-Chart {
 
             # Add line series
             $LineSeries = New-Object Series
-            $LineSeries.ChartType = $ChartTypes::'Line'
+            $LineSeries.ChartType = $ChartTypes::Line
 
             $XData_bounds = $XData | Measure-Object -Minimum -Maximum
             $x_pts = $XData_bounds.Minimum..$XData_bounds.Maximum
@@ -179,6 +179,39 @@ function Show-Chart {
             $LineSeries.Points.DataBindXY($x_pts, $y_pts)
             #$LineSeries.Color = [System.Drawing.Color]::$DataColor
             $Chart.Series.Add($LineSeries)
+        }
+        'BoxPlot' {
+            $rawSeries = New-Object Series
+            $ChartTypes = [SeriesChartType]
+            $rawSeries.ChartType = $ChartTypes::Point
+
+            $rawSeries.Name = 'RawData'
+            $rawSeries.IsVisibleInLegend = $false
+            $rawSeries.IsValueShownAsLabel = $false
+            
+            foreach ($value in $XData) {
+                $point = New-Object DataPoint
+                $point.XValue = $groupX
+                $point.YValues = @($value)
+                $rawSeries.Points.Add($point)
+            }
+            $Chart.Series.Add($rawSeries)
+
+            # BoxPlot series
+            $boxSeries = New-Object Series
+            $ChartTypes = [SeriesChartType]
+            $boxSeries.ChartType = $ChartTypes::BoxPlot
+
+            $boxSeries.Name = 'BoxPlot'
+            $boxSeries['BoxPlotSeries'] = 'RawData'
+            $boxSeries['BoxPlotShowMedian'] = $true
+            $boxSeries['BoxPlotShowUnusualValues'] = $true
+            $boxSeries['BoxPlotShowExtremeValues'] = $true
+            $boxSeries['BoxPlotWhiskerPercentile'] = '10'
+
+            # Add a dummy point to trigger boxplot rendering
+            [void]$boxSeries.Points.AddXY(1, 0)
+            $Chart.Series.Add($boxSeries)
         }
         'Histogram' {
             # Create histogram with n buckets
