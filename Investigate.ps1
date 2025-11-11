@@ -76,11 +76,11 @@ function Show-Chart {
     $Chart = New-Object Chart
     $Chart.Width = 700
     $Chart.Height = 500
-    $Chart.Left = 10
-    $Chart.Top = 10
-    $Chart.BackColor = [System.Drawing.Color]::White
-    $Chart.BorderColor = 'Black'
-    $Chart.BorderDashStyle = 'Solid'
+    #$Chart.Left = 10
+    #$Chart.Top = 10
+    #$Chart.BackColor = [System.Drawing.Color]::White
+    #$Chart.BorderColor = 'Black'
+    #$Chart.BorderDashStyle = 'Solid'
     $ChartArea = New-Object ChartArea
     $Chart.ChartAreas.Add($ChartArea)
 
@@ -97,7 +97,6 @@ function Show-Chart {
             $ChartTypes = [SeriesChartType]
             $Series.ChartType = $ChartTypes::$ChartType
 
-            $Series.Name = 'BarPlotSeries'
             $Series.Points.DataBindXY($XData, $YData)
             $Series.IsValueShownAsLabel = $true
             $Series.Color = [System.Drawing.Color]::$DataColor
@@ -111,7 +110,6 @@ function Show-Chart {
             $ChartTypes = [SeriesChartType]
             $Series.ChartType = $ChartTypes::$ChartType
 
-            $Series.Name = 'ColumnPlotSeries'
             $Series.Points.DataBindXY($XData, $YData)
             $Series.IsValueShownAsLabel = $true
             $Series.Color = [System.Drawing.Color]::$DataColor
@@ -129,10 +127,24 @@ function Show-Chart {
             $x_pts = $XData_bounds.Minimum..$XData_bounds.Maximum
             $y_pts = $x_pts | ForEach-Object {$Theta[0] * $_ + $Theta[1]}
 
-            $Series.Name = 'LinePlotSeries'
             $Series.Points.DataBindXY($x_pts, $y_pts)
-            #$Series.Color = [System.Drawing.Color]::Thistle
+            $Series.Color = [System.Drawing.Color]::$DataColor
+            $Series.BorderWidth = 3
+            
+            # Create a text annotation
+            $annotation = New-Object TextAnnotation
+            $annotation.Text = "y = $([Math]::Round($Theta[0],2))*x + $([Math]::Round($Theta[1],2))"
+            $annotation.Font = New-Object System.Drawing.Font('Lucida Console', 10, [System.Drawing.FontStyle]::Bold)
+            $annotation.ForeColor = [System.Drawing.Color]::$DataColor
+            $annotation.AxisX = $Chart.ChartAreas[0].AxisX
+            $annotation.AxisY = $Chart.ChartAreas[0].AxisY
+            $annotation_Xpos = 1.75 * ($XData | Measure-Object -Minimum).Minimum
+            $annotation.AnchorX = $annotation_Xpos
+            $annotation.AnchorY = 1.5 * ($Theta[0] * $annotation_Xpos + $Theta[1])
+            #$annotation.IsSizeAlwaysRelative = $false
+            
             $Chart.Series.Add($Series)
+            $Chart.Annotations.Add($annotation)
 
             $Form.Text = 'Line Plot'
         }
@@ -140,16 +152,16 @@ function Show-Chart {
             $Series = New-Object Series
             $ChartTypes = [SeriesChartType]
             $Series.ChartType = $ChartTypes::$ChartType
-            
+
             for ($i = 0; $i -lt $XData.Count; $i++) {
-                $null = $Series.Points.AddXY($XData[$i], $YData[$i])
+                [void]$Series.Points.AddXY($XData[$i], $YData[$i])
             }
+            
             $Series['PieLabelStyle'] = 'Outside'  # $Series.CustomProperties
-            $Series['PieLineColor'] = 'Black'  # $Series.CustomProperties
+            $Series['PieLineColor'] = 'Gray'  # $Series.CustomProperties
             $Series.Label = "#AXISLABEL: #VAL (#PERCENT{P0})"
             $Chart.Series.Add($Series)
-            #$Legend = New-Object Legend
-            #$Chart.Legends.Add($Legend)
+            
             $Form.Text = 'Pie Plot'
         }
         'Point' {
@@ -157,9 +169,8 @@ function Show-Chart {
             $ChartTypes = [SeriesChartType]
             $Series.ChartType = $ChartTypes::$ChartType
             
-            $Series.Name = 'PointPlotSeries'
             $Series.Points.DataBindXY($XData, $YData)
-            #$Series.Color = [System.Drawing.Color]::$DataColor
+            $Series.Color = [System.Drawing.Color]::$DataColor
             $Chart.Series.Add($Series)
 
             $Form.Text = 'Scatter Plot'
@@ -169,24 +180,47 @@ function Show-Chart {
             $PointsSeries = New-Object Series
             $ChartTypes = [SeriesChartType]
             $PointsSeries.ChartType = $ChartTypes::Point
+            $PointsSeries.LegendText = 'Raw data'
 
-            $PointsSeries.Name = 'PointsPlotSeries'
             $PointsSeries.Points.DataBindXY($XData, $YData)
-            #$PointsSeries.Color = [System.Drawing.Color]::$DataColor
+            $PointsSeries.Color = [System.Drawing.Color]::$DataColor
+            
             $Chart.Series.Add($PointsSeries)
 
             # Add line series
             $LineSeries = New-Object Series
             $LineSeries.ChartType = $ChartTypes::Line
+            $LineSeries.LegendText = 'Regression line'
 
             $XData_bounds = $XData | Measure-Object -Minimum -Maximum
             $x_pts = $XData_bounds.Minimum..$XData_bounds.Maximum
             $y_pts = $x_pts | ForEach-Object {$Theta[0] * $_ + $Theta[1]}
 
-            $LineSeries.Name = 'LinePlotSeries'
             $LineSeries.Points.DataBindXY($x_pts, $y_pts)
-            #$LineSeries.Color = [System.Drawing.Color]::$DataColor
+            $lineColor = 'Goldenrod'
+            $LineSeries.Color = [System.Drawing.Color]::$lineColor
+            $LineSeries.BorderWidth = 3
+            
+            # Create a text annotation
+            $annotation = New-Object TextAnnotation
+            $annotation.Text = "y = $([Math]::Round($Theta[0],2))*x + $([Math]::Round($Theta[1],2))"
+            $annotation.Font = New-Object System.Drawing.Font('Lucida Console', 10, [System.Drawing.FontStyle]::Bold)
+            $annotation.ForeColor = [System.Drawing.Color]::$lineColor
+            $annotation.AxisX = $Chart.ChartAreas[0].AxisX
+            $annotation.AxisY = $Chart.ChartAreas[0].AxisY
+            $annotation_Xpos = 1.75 * ($XData | Measure-Object -Minimum).Minimum
+            $annotation.AnchorX = $annotation_Xpos
+            $annotation.AnchorY = 1.5 * ($Theta[0] * $annotation_Xpos + $Theta[1])
+            
             $Chart.Series.Add($LineSeries)
+            $Chart.Annotations.Add($annotation)
+
+            # Create legend
+            $legend = New-Object Legend
+            $legend.Name = 'MainLegend'
+            $legend.Docking = 'Top'
+            $legend.Alignment = 'Center'
+            $Chart.Legends.Add($legend)
 
             $Form.Text = 'Point and Line Plot'
         }
@@ -233,10 +267,14 @@ function Show-Chart {
             $Series = New-Object Series
             $ChartTypes = [SeriesChartType]
             $Series.ChartType = $ChartTypes::'Column'
-            $Series.Name = 'Histogram'
 
             $Series.Color = [System.Drawing.Color]::$DataColor
-            $Series.BorderWidth = 1
+            $Series.IsValueShownAsLabel = $true
+            
+            $ChartArea.AxisX.Interval = 1
+            # Remove grid lines
+            $ChartArea.AxisX.MajorGrid.LineWidth = 0
+            $ChartArea.AxisY.MajorGrid.LineWidth = 0
 
             # Add buckets to chart
             for ($i = 0; $i -lt $histogram.BucketCount; $i++) {
