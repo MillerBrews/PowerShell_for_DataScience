@@ -1,7 +1,7 @@
 ﻿<#
 PS4DS: Acquire (Websites)
 Author: Eric K. Miller
-Last updated: 10 November 2025
+Last updated: 11 November 2025
 
 This script contains PowerShell code for plotting data.
 #>
@@ -21,8 +21,8 @@ function Show-Chart {
 
     .DESCRIPTION
         This function uses fields from a data object (arrays), and
-    optional parameters to create and display a PowerShell chart. The
-    user has the option of selecting among several chart types.
+    optional parameters to create and display a PowerShell chart.
+    The user has the option to select among several chart types.
     
     .PARAMETER ChartType
         A ValidateSet of available chart types.
@@ -38,24 +38,23 @@ function Show-Chart {
 
     .PARAMETER DataColor
         Enables the user to set the primary chart color.
+    (Default is 'SteelBlue').
 
     .PARAMETER ChartTitleText
         Enables the user to set title text for the chart.
 
     .PARAMETER XAxisTitleText
-        Enables the user to set title text for the x-axis.
+        Enables the user to set text for the x-axis.
     
     .PARAMETER YAxisTitleText
-        Enables the user to set title text for the y-axis.
+        Enables the user to set text for the y-axis.
 
     .EXAMPLE
-        $dataParams = @{XData = $StarWars_plot_fit.'height'
-                YData = $StarWars_plot_fit.'mass'
-        }
+        $dataParams = @{XData = $StarWars.'height'
+                        YData = $StarWars.'mass'}
         $chartParams = @{ChartTitleText = "Star Wars Height vs. Mass"
             XAxisTitleText = "Height (cm)"
-            YAxisTitleText = "Mass (kg)"
-        }
+            YAxisTitleText = "Mass (kg)"}
         Show-Chart -ChartType Point @dataParams @chartParams
     #>
     [CmdletBinding(SupportsShouldProcess)]
@@ -76,11 +75,6 @@ function Show-Chart {
     $Chart = New-Object Chart
     $Chart.Width = 700
     $Chart.Height = 500
-    #$Chart.Left = 10
-    #$Chart.Top = 10
-    #$Chart.BackColor = [System.Drawing.Color]::White
-    #$Chart.BorderColor = 'Black'
-    #$Chart.BorderDashStyle = 'Solid'
     $ChartArea = New-Object ChartArea
     $Chart.ChartAreas.Add($ChartArea)
 
@@ -90,7 +84,7 @@ function Show-Chart {
     $Form.Height = 480
     $Form.Controls.Add($Chart)
     
-    # Create the data series
+    # Create the data series and their properties for charting
     switch ($ChartType) {
         'Bar' {
             $Series = New-Object Series
@@ -176,7 +170,7 @@ function Show-Chart {
             $Form.Text = 'Scatter Plot'
         }
         'PointsAndLine' {
-            # Add points series
+            # Add points series -------------------------------
             $PointsSeries = New-Object Series
             $ChartTypes = [SeriesChartType]
             $PointsSeries.ChartType = $ChartTypes::Point
@@ -187,7 +181,7 @@ function Show-Chart {
             
             $Chart.Series.Add($PointsSeries)
 
-            # Add line series
+            # Add line series  --------------------------------
             $LineSeries = New-Object Series
             $LineSeries.ChartType = $ChartTypes::Line
             $LineSeries.LegendText = 'Regression line'
@@ -201,7 +195,7 @@ function Show-Chart {
             $LineSeries.Color = [System.Drawing.Color]::$lineColor
             $LineSeries.BorderWidth = 3
             
-            # Create a text annotation
+            # Create a text annotation showing the line's equation
             $annotation = New-Object TextAnnotation
             $annotation.Text = "y = $([Math]::Round($Theta[0],2))*x + $([Math]::Round($Theta[1],2))"
             $annotation.Font = New-Object System.Drawing.Font('Lucida Console', 10, [System.Drawing.FontStyle]::Bold)
@@ -217,7 +211,6 @@ function Show-Chart {
 
             # Create legend
             $legend = New-Object Legend
-            $legend.Name = 'MainLegend'
             $legend.Docking = 'Top'
             $legend.Alignment = 'Center'
             $Chart.Legends.Add($legend)
@@ -261,7 +254,8 @@ function Show-Chart {
         }
         'Histogram' {
             # Create histogram with n buckets
-            $histogram = New-Object MathNet.Numerics.Statistics.Histogram($XData, 10)
+            $n = 10
+            $histogram = New-Object MathNet.Numerics.Statistics.Histogram($XData, $n)
 
             # Create series for histogram bars
             $Series = New-Object Series
@@ -292,21 +286,17 @@ function Show-Chart {
     
     $ChartTitle = New-Object Title
     $ChartTitle.Text = $ChartTitleText
-    $Font = New-Object System.Drawing.Font @('Lucida Console', '12', [System.Drawing.FontStyle]::Bold)
+    $Font = New-Object System.Drawing.Font('Lucida Console', 12, [System.Drawing.FontStyle]::Bold)
     $ChartTitle.Font = $Font
     $Chart.Titles.Add($ChartTitle)
 
     $ChartArea.AxisX.Title = $XAxisTitleText
     $ChartArea.AxisY.Title = $YAxisTitleText
-
-    $AnchorAll = [System.Windows.Forms.AnchorStyles]::Bottom -bor [System.Windows.Forms.AnchorStyles]::Right -bor
-    [System.Windows.Forms.AnchorStyles]::Top -bor [System.Windows.Forms.AnchorStyles]::Left
-
-    $Chart.Anchor = $AnchorAll
-    $Chart.Dock = "Fill"
+    
+    $Chart.Dock = 'Fill'  # chart adjusts to fit the entire container when the Form is resized
 
     #$Chart.SaveImage(...)
 
-    $Form.Add_Shown({$Form.Activate()})
-    $Form.ShowDialog()
+    $Form.Add_Shown({$Form.Activate()})  # ensures the Form gets focus
+    $Form.ShowDialog()  # shows the Form
 }
