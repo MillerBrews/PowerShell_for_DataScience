@@ -1,9 +1,11 @@
 ﻿<#
-PS4DS: Acquire (Websites)
+PS4DS: Investigate (Plotting)
 Author: Eric K. Miller
-Last updated: 11 November 2025
+Last updated: 20 November 2025
 
-This script contains PowerShell code for plotting data.
+This script contains PowerShell code for plotting data. It is part of
+the PowerShell_for_DataScience module, so assumes the Math.NET Numerics
+DLL is loaded, as this is integral to the histogram plotting.
 #>
 
 #========================
@@ -24,6 +26,9 @@ function Show-Chart {
     optional parameters to create and display a PowerShell chart.
     The user has the option to select among several chart types.
     
+    .PARAMETER DataObject
+        The object to use to plot data.
+
     .PARAMETER ChartType
         A ValidateSet of available chart types.
     
@@ -59,6 +64,7 @@ function Show-Chart {
     #>
     [CmdletBinding(SupportsShouldProcess)]
     param (
+        [Parameter()]$DataObject,
         [Parameter(Mandatory)]
         [ValidateSet('Bar', 'Column', 'Line', 'Pie', 'Point', 'PointsAndLine', 'BoxPlot', 'Histogram')]
         [string]$ChartType,
@@ -178,7 +184,6 @@ function Show-Chart {
 
             $PointsSeries.Points.DataBindXY($XData, $YData)
             $PointsSeries.Color = [System.Drawing.Color]::$DataColor
-            
             $Chart.Series.Add($PointsSeries)
 
             # Add line series  --------------------------------
@@ -218,39 +223,73 @@ function Show-Chart {
             $Form.Text = 'Point and Line Plot'
         }
         'BoxPlot' {
-            $rawSeries = New-Object Series
-            $ChartTypes = [SeriesChartType]
-            $rawSeries.ChartType = $ChartTypes::Point
+            # Loop through each numeric column
+            for ($i = 0; $i -lt $XData[0].PSObject.Properties.Name.Count; $i++) {
+                # Add points series -------------------------------
+                # ...
+                # Add BoxPlot series ------------------------------
+                $col = $XData[0].PSObject.Properties.Name[$i]
+                $xVal = $i + 1
 
-            $rawSeries.Name = 'RawData'
-            $rawSeries.IsVisibleInLegend = $false
-            $rawSeries.IsValueShownAsLabel = $false
-            
-            foreach ($value in $XData) {
-                $point = New-Object DataPoint
-                $point.XValue = $groupX
-                $point.YValues = @($value)
-                $rawSeries.Points.Add($point)
+                # Raw data series
+                $rawSeries = New-Object Series
+                $rawSeries.Name = "Raw_$col"
+                $rawSeries.ChartType = 'Point'
+                $rawSeries.IsVisibleInLegend = $false
+
+                foreach ($row in $data) {
+                    $val = $row.$col
+                    if ($val -is [double] -or $val -is [int]) {
+                        $point = New-Object DataPoint
+                        $point.XValue = $xVal
+                        $point.YValues = @($val)
+                        $rawSeries.Points.Add($point)
+                    }
+                }
+                $Chart.Series.Add($rawSeries)
+
+                # BoxPlot series
+                $boxSeries = New-Object Series
+                $boxSeries.Name = "Box_$col"
+                $boxSeries.ChartType = 'BoxPlot'
+                $boxSeries['BoxPlotSeries'] = $rawSeries.Name
+                $boxSeries['BoxPlotShowMedian'] = "true"
+                $boxSeries['BoxPlotShowUnusualValues'] = "true"
+                $boxSeries['BoxPlotShowExtremeValues'] = "true"
+                $boxSeries['BoxPlotWhiskerPercentile'] = "10"
+                $boxSeries.BorderColor = 'Black'
+                $boxSeries.BorderWidth = 2
+
+                # Trigger rendering
+                [void]$boxSeries.Points.AddXY($xVal, 0)
+                $Chart.Series.Add($boxSeries)
+
+                # Label
+                $label = New-Object CustomLabel
+                $label.FromPosition = $xVal - 0.5
+                $label.ToPosition = $xVal + 0.5
+                $label.Text = $col
+                $ChartArea.AxisX.CustomLabels.Add($label)
+               }
+
+            # Color outliers in red
+            foreach ($series in $Chart.Series) {
+                if ($series.ChartType -eq 'BoxPlot') {
+                    foreach ($pt in $series.Points) {
+                        if ($pt.MarkerStyle -eq 'Circle') {
+                            $pt.Color = 'Red'
+                        }
+                    }
+                }
             }
-            $Chart.Series.Add($rawSeries)
+            $Chart.ChartAreas[0].AxisX.Interval = 1
+            $Chart.ChartAreas[0].AxisX.IsLabelAutoFit = $false
+            $ChartArea.AxisX.Minimum = 0
 
-            # BoxPlot series
-            $boxSeries = New-Object Series
-            $ChartTypes = [SeriesChartType]
-            $boxSeries.ChartType = $ChartTypes::BoxPlot
-
-            $boxSeries.Name = 'BoxPlot'
-            $boxSeries['BoxPlotSeries'] = 'RawData'
-            $boxSeries['BoxPlotShowMedian'] = $true
-            $boxSeries['BoxPlotShowUnusualValues'] = $true
-            $boxSeries['BoxPlotShowExtremeValues'] = $true
-            $boxSeries['BoxPlotWhiskerPercentile'] = '10'
-
-            # Add a dummy point to trigger boxplot rendering
-            [void]$boxSeries.Points.AddXY(1, 0)
             $Chart.Series.Add($boxSeries)
 
-            $Form.Text = 'BoxPlot'
+            $Form.Text = 'BoxPlots by Numeric Column'
+            #>
         }
         'Histogram' {
             # Create histogram with n buckets
@@ -277,11 +316,9 @@ function Show-Chart {
                 [void]$Series.Points.AddXY($label, $bucket.Count)
             }
             $Chart.Series.Add($Series)
-
+            
             $Form.Text = 'Histogram'
         }
-#        default
-#            {$Impact_Structures[$i].'Diameter__km__approx' = $_}
     }
     
     $ChartTitle = New-Object Title
