@@ -1,5 +1,5 @@
 ﻿<#
-PS4DS: Acquire (Websites)
+PS4DS: Clean & Transform Data
 Author: Eric K. Miller
 Last updated: 30 October 2025
 
@@ -196,4 +196,5 @@ function Get-RangeMean {
     #   [double]$maxrng = ($InputValue -split $dash_pttrn)[1]
     [double]$RangeAverage = [Math]::Round(($minrng+$maxrng)/2, $FractionalDigits)
     return $RangeAverage
+
 }
